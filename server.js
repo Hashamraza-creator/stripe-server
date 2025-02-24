@@ -1,46 +1,50 @@
+require('dotenv').config(); // Load environment variables
 const express = require('express');
+const bodyParser = require('body-parser');
 const cors = require('cors');
-const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc'); // Use your real secret key
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
-// Enable CORS
+// Enable CORS for frontend connection
 app.use(cors({
-    origin: 'http://127.0.0.1:5500', // Adjust to match your frontend
+    origin: 'http://127.0.0.1:5500',
     methods: ['GET', 'POST'],
     credentials: true,
 }));
 
-app.use(express.json()); // Express JSON parser
+app.use(bodyParser.json());
 
-// Stripe Payment Endpoint
+// Payment Endpoint
 app.post('/charge', async (req, res) => {
-    const { paymentMethodId, amount } = req.body;
+    const { amount, paymentMethodId } = req.body;
 
     try {
-        // Step 1: Create a PaymentIntent
+        // Create a PaymentIntent with automatic payment methods (no redirects)
         const paymentIntent = await stripe.paymentIntents.create({
-            amount, // Amount in cents
+            amount,
             currency: 'usd',
-            payment_method: paymentMethodId, // Use correct payment method
-            confirm: true, // Automatically confirm the payment
+            payment_method: paymentMethodId,
+            confirm: true,
+            automatic_payment_methods: {
+                enabled: true,
+                allow_redirects: 'never', // Prevents redirect-based payments
+            },
         });
 
-        // Step 2: Retrieve Payment Details
+        // Retrieve the payment method details
         const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
 
-        // Step 3: Send success response with card details
+        // Send success response with card details
         res.json({
             success: true,
             message: 'Payment successful!',
-            paymentIntentId: paymentIntent.id,
             card_details: {
                 brand: paymentMethod.card.brand,
                 last4: paymentMethod.card.last4,
                 exp_month: paymentMethod.card.exp_month,
                 exp_year: paymentMethod.card.exp_year,
-                country: paymentMethod.card.country,
-            }
+            },
         });
 
     } catch (error) {
