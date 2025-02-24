@@ -1,53 +1,36 @@
-require('dotenv').config(); // Load environment variables
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const cors = require('cors'); // Import the cors package
+const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc'); // Use your secret key
 
 const app = express();
 
-// Enable CORS for frontend connection
+// Enable CORS for all routes
 app.use(cors({
-    origin: 'http://127.0.0.1:5500',
-    methods: ['GET', 'POST'],
-    credentials: true,
+    origin: 'http://127.0.0.1:5500', // Allow requests from your frontend
+    methods: ['GET', 'POST'], // Allow specific HTTP methods
+    credentials: true, // Allow cookies and credentials
 }));
 
 app.use(bodyParser.json());
 
-// Payment Endpoint
+// Endpoint to handle payment
 app.post('/charge', async (req, res) => {
-    const { amount, paymentMethodId } = req.body;
+    const { stripeToken, amount } = req.body;
 
     try {
-        // Create a PaymentIntent with automatic payment methods (no redirects)
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount,
+        // Create a charge using the token
+        const charge = await stripe.charges.create({
+            amount: amount, // Amount in cents
             currency: 'usd',
-            payment_method: paymentMethodId,
-            confirm: true,
-            automatic_payment_methods: {
-                enabled: true,
-                allow_redirects: 'never', // Prevents redirect-based payments
-            },
+            source: stripeToken,
+            description: 'Example charge',
         });
 
-        // Retrieve the payment method details
-        const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
-
-        // Send success response with card details
-        res.json({
-            success: true,
-            message: 'Payment successful!',
-            card_details: {
-                brand: paymentMethod.card.brand,
-                last4: paymentMethod.card.last4,
-                exp_month: paymentMethod.card.exp_month,
-                exp_year: paymentMethod.card.exp_year,
-            },
-        });
-
+        // Send a success response
+        res.json({ success: true, message: 'Payment successful!' });
     } catch (error) {
+        // Send an error response
         res.status(500).json({ success: false, message: error.message });
     }
 });
