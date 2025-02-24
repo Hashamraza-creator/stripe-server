@@ -1,50 +1,49 @@
 const express = require('express');
 const cors = require('cors');
-const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc'); // Replace with your actual Stripe Secret Key
+const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc'); // Use your real secret key
 
 const app = express();
 
-// Enable CORS for frontend communication
+// Enable CORS
 app.use(cors({
-    origin: 'http://127.0.0.1:5500', // Allow requests from your frontend
+    origin: 'http://127.0.0.1:5500', // Adjust to match your frontend
     methods: ['GET', 'POST'],
     credentials: true,
 }));
 
-app.use(express.json()); // Use express built-in JSON parser
+app.use(express.json()); // Express JSON parser
 
-// Endpoint to handle payment
+// Stripe Payment Endpoint
 app.post('/charge', async (req, res) => {
-    const { stripeToken, amount } = req.body;
+    const { paymentMethodId, amount } = req.body;
 
     try {
-        // Create a charge using the token
-        const charge = await stripe.charges.create({
+        // Step 1: Create a PaymentIntent
+        const paymentIntent = await stripe.paymentIntents.create({
             amount, // Amount in cents
             currency: 'usd',
-            source: stripeToken,
-            description: 'Example charge',
+            payment_method: paymentMethodId, // Use correct payment method
+            confirm: true, // Automatically confirm the payment
         });
 
-        // Retrieve payment method details from the charge
-        const paymentMethod = await stripe.paymentMethods.retrieve(charge.payment_method);
+        // Step 2: Retrieve Payment Details
+        const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
 
-        // Send a success response with card details
+        // Step 3: Send success response with card details
         res.json({
             success: true,
             message: 'Payment successful!',
+            paymentIntentId: paymentIntent.id,
             card_details: {
                 brand: paymentMethod.card.brand,
                 last4: paymentMethod.card.last4,
                 exp_month: paymentMethod.card.exp_month,
                 exp_year: paymentMethod.card.exp_year,
                 country: paymentMethod.card.country,
-            },
-            charge_id: charge.id,
+            }
         });
 
     } catch (error) {
-        // Send an error response
         res.status(500).json({ success: false, message: error.message });
     }
 });
