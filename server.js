@@ -1,36 +1,31 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const cors = require('cors'); // Import the cors package
 const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc'); // Use your secret key
 
 const app = express();
-
-// Enable CORS for all routes
-app.use(cors({
-    origin: 'http://127.0.0.1:5500', // Allow requests from your frontend
-    methods: ['GET', 'POST'], // Allow specific HTTP methods
-    credentials: true, // Allow cookies and credentials
-}));
-
 app.use(bodyParser.json());
 
-// Endpoint to handle payment
+// Define the /charge route
 app.post('/charge', async (req, res) => {
     const { stripeToken, amount } = req.body;
 
     try {
+        console.log('Received request:', { stripeToken, amount }); // Log the request data
+
         // Create a charge using the token
         const charge = await stripe.charges.create({
             amount: amount, // Amount in cents
             currency: 'usd',
-            source: stripeToken,
+            source: stripeToken, // Ensure this is the correct token
             description: 'Example charge',
         });
+
+        console.log('Charge successful:', charge); // Log the successful charge
 
         // Send a success response
         res.json({ success: true, message: 'Payment successful!' });
     } catch (error) {
-        // Send an error response
+        console.error('Error creating charge:', error); // Log the error
         res.status(500).json({ success: false, message: error.message });
     }
 });
