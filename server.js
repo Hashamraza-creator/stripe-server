@@ -1,37 +1,31 @@
-
-
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const bodyParser = require('body-parser');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc'); // Use your secret key
 
 const app = express();
-const PORT = process.env.PORT || 5005;
-
-// Middleware
-app.use(cors());
 app.use(bodyParser.json());
 
-// Route to create PaymentIntent
-app.post('/create-payment-intent', async (req, res) => {
+// Endpoint to handle payment
+app.post('/charge', async (req, res) => {
+    const { stripeToken, amount } = req.body;
+
     try {
-        const { amount } = req.body;
-        
-        // Create PaymentIntent
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount,
+        // Create a charge using the token
+        const charge = await stripe.charges.create({
+            amount: amount, // Amount in cents
             currency: 'usd',
-            payment_method_types: ['card'],
+            source: stripeToken,
+            description: 'Example charge',
         });
 
-        res.json({ clientSecret: paymentIntent.client_secret });
+        // Send a success response
+        res.json({ success: true, message: 'Payment successful!' });
     } catch (error) {
-        console.error('Error creating payment intent:', error);
-        res.status(500).json({ error: error.message });
+        // Send an error response
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
