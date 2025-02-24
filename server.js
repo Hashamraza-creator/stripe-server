@@ -7,11 +7,10 @@ const app = express();
 
 // Enable CORS for all routes
 app.use(cors({
-    origin: 'http://127.0.0.1:5500', // Allow requests from your frontend
+    origin: ['http://127.0.0.1:5500', 'https://zain-c-louds-webnew.vercel.app'], // Allow requests from your frontend
     methods: ['GET', 'POST'], // Allow specific HTTP methods
     credentials: true, // Allow cookies and credentials
 }));
-
 app.use(bodyParser.json());
 
 // Endpoint to handle payment
